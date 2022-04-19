@@ -5,7 +5,7 @@ import telebot
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 import threading
 import mysql.connector as MySQL
-
+import re
 
 MySQL_HOST = "141.8.192.151";
 MySQL_USER = "f0658097_tg";
@@ -14,28 +14,26 @@ MySQL_DB = "f0658097_tg";
 
 dbHandle = MySQL.connect(host = MySQL_HOST, user = MySQL_USER, password = MySQL_PASSWORD, database = MySQL_DB)
 
-print(dbHandle)
-
 lock = threading.Lock()
 
 bot = telebot.TeleBot("5239236978:AAFYs8tCXGI9sGh5UhIjNCh9uOqANi1Yp8Y")
 
 eCreate = 0
 eMessID = 0
+isEditing = "0"
 eventName = ""
 
 cur = dbHandle.cursor()
 
 cur.execute('''CREATE TABLE IF NOT EXISTS eventsList (
-    `rID` INTEGER PRIMARY KEY AUTOINCREMENT,
-    `eID` VARCHAR UNIQUE NOT NULL,
-    `eName` VARCHAR NOT NULL,
-    `eCreator` VARCHAR NOT NULL,
-    `cDate` VARCHAR NOT NULL,
-    `rDate` VARCHAR DEFAULT 0,
-    `chatID` INTEGER NOT NULL,
-    `messageID1` INTEGER NOT NULL,
-    `messageID2` INTEGER NOT NULL
+    `eID` varchar(64) NOT NULL,
+    `eName` varchar(64) NOT NULL,
+    `eCreator` varchar(64) NOT NULL,
+    `cDate` varchar(64) NOT NULL,
+    `rDate` varchar(64) DEFAULT 0,
+    `chatID` bigint(32) NOT NULL,
+    `messageID1` bigint(32) NOT NULL,
+    `messageID2` bigint(32) NOT NULL
 )''')
 
 dbHandle.commit();
@@ -75,18 +73,21 @@ def send_welcome(message):
 def cal(c):
     result, key, step = DetailedTelegramCalendar().process(c.data)
     if not result and key:
-        bot.edit_message_text(f"Please select the {LSTEP[step]}",
-                              c.message.chat.id,
-                              c.message.message_id,
-                              reply_markup=key)
+        if isEditing == "0":
+            bot.edit_message_text(f"Please select the {LSTEP[step]}", c.message.chat.id, c.message.message_id, reply_markup=key)
+        else:
+            bot.edit_message_text(f"Please new select the {LSTEP[step]}", c.message.chat.id, c.message.message_id, reply_markup=key)
+
     elif result:
-        bot.edit_message_text(f"The date has been selected: {result}",
-                              c.message.chat.id,
-                              c.message.message_id)
+        if isEditing == "0":
+            bot.edit_message_text(f"The date has been selected: {result}", c.message.chat.id, c.message.message_id)
+        else:
+            bot.edit_message_text(f"The new date has been selected: {result}", c.message.chat.id, c.message.message_id)                   
+                        
         global eventDate
         eventDate = result
         setCreate(3)
-        bot.send_message(eMessID.from_user.id, f"Please enter the time (HH:MM):")
+        bot.send_message(c.from_user.id, f"Please enter the time (HH:MM):")
 
 @bot.callback_query_handler(func=lambda call:True)
 def callback_worker(call):
@@ -101,7 +102,7 @@ def callback_worker(call):
             if len(userData) == 0:
                 send_code(call.from_user, row[0], row[1])
             else:
-                bot.send_message(call.from_user.id, "You've already joined that event. (<b>{0}</b>)".format(row[0]), parse_mode="HTML")
+                bot.send_message(call.from_user.id, "You've already joined that event. (<b>{0}</b>)".format(row[1]), parse_mode="HTML")
             break
         if call.data == "un_" + str(row[0]):
             with lock:
@@ -109,20 +110,27 @@ def callback_worker(call):
                 userData = list(cur)
             if len(userData) != 0:
                 bot.edit_message_text("You leaved the event [ <b>{0}</b> ]! Your QR was removed from database.".format(row[1]), call.from_user.id, userData[0][1], parse_mode="html")
-                cur.execute("DELETE FROM '{0}' WHERE `userID` = {1}".format(str(row[0]), call.from_user.id))
+                cur.execute("DELETE FROM {0} WHERE userID = {1}".format(str(row[0]), call.from_user.id))
+                dbHandle.commit()
             else:
-                bot.send_message(call.from_user.id, "You've not joined the event yet. (<b>{0}</b>)".format(row[0]), parse_mode="HTML")
+                bot.send_message(call.from_user.id, "You've not joined the event yet. (<b>{0}</b>)".format(row[1]), parse_mode="HTML")
             break
         if call.data == "delete_" + str(row[0]):
             with lock:
                 cur.execute("SELECT chatID, messageID1, messageID2, eName FROM eventsList WHERE eID = '{0}'".format(row[0]))
                 eventInfo = list(cur)
-
             bot.edit_message_text("<i>Event <b>{0}</b> has been removed!</i>".format(eventInfo[0][3]), eventInfo[0][0], eventInfo[0][1], parse_mode="html")
             bot.edit_message_text("<i>Your event was removed from database! (<b>{0}</b>)</i>".format(eventInfo[0][3]), call.from_user.id, eventInfo[0][2], parse_mode="html")
-            cur.execute("DROP TABLE IF EXISTS {0}".format(str(row[0])))
-            cur.execute("DELETE FROM 'eventsList' WHERE `eID` = {0}".format(call.data))
+            cur.execute("DROP TABLE IF EXISTS `{0}`".format(str(row[0])))
+            dbHandle.commit()
+            cur.execute("DELETE FROM `eventsList` WHERE `eID` = {0}".format(call.data))
+            dbHandle.commit()
+        if call.data == "edit_" + str(row[0]):
+            bot.send_message(call.from_user.id, "Please enter event's new name:")
 
+            setCreate(1)
+            global isEditing
+            isEditing = str(row[0])
 
 @bot.message_handler(commands=["newevent"])
 def new_event(message):
@@ -140,9 +148,12 @@ def get_new_event_info(message):
             calendar, step = DetailedTelegramCalendar().build()
             bot.send_message(message.from_user.id, f"Please select the {LSTEP[step]}:", reply_markup=calendar)
         if eCreate == 3:
-            global eventDate
-            eventDate = str(eventDate) + " " + message.text
-            create_new_event(eMessID, eventName, eventDate)
+            if re.match("^(2[0-3]|[01]?[0-9]):([0-5]?[0-9])$", message.text) == None:
+                bot.send_message(message.from_user.id, f"Please enter the time (HH:MM):")
+            else:
+                global eventDate
+                eventDate = str(eventDate) + " " + message.text
+                create_new_event(eMessID, eventName, eventDate)
 
 def send_code(user, evID, evName):
     now = datetime.now()
@@ -184,44 +195,59 @@ def send_code(user, evID, evName):
     dbHandle.commit()
 
 def create_new_event(eMessID, eName, eDate):
-    tempID = random.sample(idCharacters, 6)
-    tempUnique = "".join(tempID)
-    eventUnique = "Event_" + tempUnique
-    now = datetime.now()
-    postObject = {
-        "eID": eventUnique,
-        "eCreator": eMessID.from_user.first_name,
-        "cDate": now.strftime("%Y-%m-%d %H:%M:%S"),
-        "rDate": eDate + ":00"
-    }
-    cur.execute('''CREATE TABLE {0} (
-        `rKey` INTEGER PRIMARY KEY AUTOINCREMENT,
-        `unicalID` VARCHAR UNIQUE NOT NULL,
-        `userID` INTEGER NOT NULL,
-        `userName` VARCHAR NOT NULL,
-        `fName` VARCHAR NOT NULL,
-        `lName` VARCHAR NOT NULL,
-        `cDate` VARCHAR NOT NULL,
-        `rDate` VARCHAR NOT NULL,
-        `messageID1` INTEGER NOT NULL,
-        `messageID2` INTEGER NOT NULL
-      )'''.format(eventUnique))
-    dbHandle.commit();
+    if isEditing == "0":
+        tempID = random.sample(idCharacters, 6)
+        tempUnique = "".join(tempID)
+        eventUnique = "Event_" + tempUnique
+        now = datetime.now()
+        postObject = {
+            "eID": eventUnique,
+            "eCreator": eMessID.from_user.first_name,
+            "cDate": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "rDate": eDate
+        }
+        cur.execute('''CREATE TABLE {0} (
+            `unicalID` varchar(64) UNIQUE NOT NULL,
+            `userID` int(11) NOT NULL,
+            `userName` varchar(64) NOT NULL,
+            `fName` varchar(64) NOT NULL,
+            `lName` varchar(64) NOT NULL,
+            `cDate` varchar(64) NOT NULL,
+            `rDate` varchar(64) NOT NULL,
+            `messageID1` bigint(32) NOT NULL,
+            `messageID2` bigint(32) NOT NULL
+        )'''.format(eventUnique))
+        dbHandle.commit();
 
-    keyboard1 = telebot.types.InlineKeyboardMarkup()
-    button_join1 = telebot.types.InlineKeyboardButton(text='Edit', callback_data='edit_' + eventUnique)
-    keyboard1.add(button_join1)
-    button_join2 = telebot.types.InlineKeyboardButton(text='Delete', callback_data='delete_' + eventUnique)
-    keyboard1.add(button_join2)
-    messagec = bot.send_message(eMessID.from_user.id, "You've created an event <b>{0}</b>!".format(eName), parse_mode="HTML", reply_markup=keyboard1)
-    str = "<b>{0}</b> created an event [ <b>{1}</b> - <b>{2}</b> ].\nWould you like to join?".format(eMessID.from_user.first_name, eName, eDate)
-    keyboard = telebot.types.InlineKeyboardMarkup()
-    button_join = telebot.types.InlineKeyboardButton(text='Join the event!', callback_data='join_' + eventUnique)
-    keyboard.add(button_join)
-    message = bot.send_message(eMessID.chat.id, str, parse_mode="HTML", reply_markup=keyboard)
-    sqlStr = '''INSERT INTO eventsList (eID, eCreator, eName, cDate, rDate, chatID, messageID1, messageID2) VALUES ('{0}', '{1}', '{2}', '{3}', '0', {4}, {5}, {6})'''.format(postObject['eID'], postObject['eCreator'], eName, postObject['cDate'], message.chat.id, message.message_id, messagec.message_id)
-    cur.execute(sqlStr)
-    dbHandle.commit()
+        keyboard1 = telebot.types.InlineKeyboardMarkup()
+        button_join1 = telebot.types.InlineKeyboardButton(text='Edit', callback_data='edit_' + eventUnique)
+        keyboard1.add(button_join1)
+        button_join2 = telebot.types.InlineKeyboardButton(text='Delete', callback_data='delete_' + eventUnique)
+        keyboard1.add(button_join2)
+        messagec = bot.send_message(eMessID.from_user.id, "You've created an event <b>{0}</b>!".format(eName), parse_mode="HTML", reply_markup=keyboard1)
+        str = "<b>{0}</b> created an event [ <b>{1}</b> - <b>{2}</b> ].\nWould you like to join?".format(eMessID.from_user.first_name, eName, eDate)
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        button_join = telebot.types.InlineKeyboardButton(text='Join the event!', callback_data='join_' + eventUnique)
+        keyboard.add(button_join)
+        message = bot.send_message(eMessID.chat.id, str, parse_mode="HTML", reply_markup=keyboard)
+        sqlStr = '''INSERT INTO eventsList (eID, eCreator, eName, cDate, rDate, chatID, messageID1, messageID2) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', {5}, {6}, {7})'''.format(postObject['eID'], postObject['eCreator'], eName, postObject['cDate'], postObject['rDate'], eMessID.chat.id, message.message_id, messagec.message_id)
+        cur.execute(sqlStr)
+        dbHandle.commit()
+    else:
+        with lock:
+            cur.execute("SELECT * FROM `eventsList` WHERE eID = '{0}'".format(isEditing))
+            eventInfo = list(cur)
+
+        str = "<b>{0}</b> created an event [ <b>{1}</b> - <b>{2}</b> ].\nWould you like to join? <i><b>(Edited by {0})</b></i>".format(eventInfo[0][2], eName, eDate, eName)
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        button_join = telebot.types.InlineKeyboardButton(text='Join the event!', callback_data='join_' + eventInfo[0][0])
+        keyboard.add(button_join)
+        bot.edit_message_text(str, eventInfo[0][5], eventInfo[0][6], reply_markup=keyboard, parse_mode="HTML")
+        bot.send_message(eventInfo[0][5], "{0} edited the event!\n• <b>{1}</b> -> <b>{2}</b>\n• <b>{3}</b> -> <b>{4}</b>".format(eventInfo[0][2], eventInfo[0][1], eName, eventInfo[0][4], eDate), parse_mode="HTML", reply_to_message_id=eventInfo[0][6])
+
+        sqlStr = "UPDATE `eventsList` SET `eName`='{0}', `rDate`='{1}' WHERE `eID` = '{2}'".format(eName, eDate, isEditing)
+        cur.execute(sqlStr)
+        dbHandle.commit()
 
 bot.polling(none_stop=True, interval=0)
 dbHandle.close()
