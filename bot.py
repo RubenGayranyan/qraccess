@@ -1,10 +1,8 @@
-import MySQLdb
 import qrcode
 import random
 from datetime import datetime
 import telebot
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
-import sqlite3
 import threading
 import mysql.connector as MySQL
 
