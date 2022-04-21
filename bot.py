@@ -12,7 +12,7 @@ MySQL_HOST = "141.8.192.151"
 MySQL_USER = "f0658097_tg"
 MySQL_PASSWORD = "hapaumucdi"
 MySQL_DB = "f0658097_tg"
-dbHandle = MySQL.connect(host=MySQL_HOST, user=MySQL_USER, password=MySQL_PASSWORD, database=MySQL_DB)
+
 lock = threading.Lock()
 bot = telebot.TeleBot("5239236978:AAFYs8tCXGI9sGh5UhIjNCh9uOqANi1Yp8Y")
 eCreate = 0
@@ -20,22 +20,6 @@ eMessID = 0
 isEditing = "0"
 eventName = ""
 isOpenedManageMenu = 0
-cur = dbHandle.cursor()
-
-cur.execute('''CREATE TABLE IF NOT EXISTS eventsList (
-    `eID` varchar(64) NOT NULL,
-    `eName` varchar(64) NOT NULL,
-    `eCreator` varchar(64) NOT NULL,
-    `cDate` datetime DEFAULT CURRENT_TIMESTAMP,
-    `rDate` datetime DEFAULT CURRENT_TIMESTAMP,
-    `chatID` bigint(32) NOT NULL,
-    `messageID1` bigint(32) NOT NULL,
-    `messageID2` bigint(32) NOT NULL,
-    `eDescription` longtext NOT NULL,
-    `eCreatorID` bigint(32) NOT NULL
-)''')
-
-dbHandle.commit()
 
 def setCreate(arg):
     global eCreate
@@ -67,6 +51,22 @@ qr = qrcode.QRCode(
     border=5)
 
 def runBot():
+    dbHandle = MySQL.connect(host=MySQL_HOST, user=MySQL_USER, password=MySQL_PASSWORD, database=MySQL_DB)
+    cur = dbHandle.cursor()
+    cur.execute('''CREATE TABLE IF NOT EXISTS eventsList (
+        `eID` varchar(64) NOT NULL,
+        `eName` varchar(64) NOT NULL,
+        `eCreator` varchar(64) NOT NULL,
+        `cDate` datetime DEFAULT CURRENT_TIMESTAMP,
+        `rDate` datetime DEFAULT CURRENT_TIMESTAMP,
+        `chatID` bigint(32) NOT NULL,
+        `messageID1` bigint(32) NOT NULL,
+        `messageID2` bigint(32) NOT NULL,
+        `eDescription` longtext NOT NULL,
+        `eCreatorID` bigint(32) NOT NULL
+    )''')
+    dbHandle.commit()
+
     @bot.message_handler(commands=["start", "help"])
     def send_welcome(message):
         fName = message.from_user.first_name
