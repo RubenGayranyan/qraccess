@@ -1,4 +1,3 @@
-from parso import parse
 import qrcode
 import random
 from datetime import datetime
@@ -7,6 +6,7 @@ from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 import threading
 import mysql.connector as MySQL
 import re
+import time
 
 MySQL_HOST = "141.8.192.151";
 MySQL_USER = "f0658097_tg";
@@ -67,8 +67,8 @@ idCharacters = cLetters + sLetters + numbers
 
 qr = qrcode.QRCode(
         version=1,
-        box_size=10,
-        border=5)
+        box_size=5,
+        border=2)
         
 @bot.message_handler(commands=["start", "help"])
 def send_welcome(message):
@@ -87,6 +87,7 @@ def sendParticipantsList(message):
         for row in eventsList:
             button_join = telebot.types.InlineKeyboardButton(text=str(row[1]), callback_data='info_' + str(row[0]))
             keyboard.add(button_join)
+            print(row[0])
         bot.send_message(message.from_user.id, f"You have created {len(eventsList)} events:", reply_markup=keyboard)
     else:
         bot.send_message(message.from_user.id, "You haven't created events yet.")
@@ -157,21 +158,18 @@ def callback_worker(call):
             isEditing = str(row[0])
         if call.data == "info_" + str(row[0]):
             setManageMenuState(1)
-            print("st1")
+            print(str(row[0]))
             keyboard = telebot.types.InlineKeyboardMarkup()
             with lock:
                 cur.execute(f"SELECT * FROM {row[0]}")
                 eventInfo = list(cur)
-                print(eventInfo)
-            print("st2")
             button_join = telebot.types.InlineKeyboardButton(text='Participants list', callback_data='partList_' + str(row[0]))
             keyboard.add(button_join)
             button_join = telebot.types.InlineKeyboardButton(text='Edit this event', callback_data='edit_' + str(row[0]))
             keyboard.add(button_join)
             button_join = telebot.types.InlineKeyboardButton(text='Delete this event', callback_data='delete_' + str(row[0]))
             keyboard.add(button_join)
-            bot.edit_message_text(f"{len(eventInfo)} people have joined this event [{data[0][1]}]:", call.from_user.id, call.message.message_id, parse_mode="html", reply_markup=keyboard)
-            print("st3")
+            bot.edit_message_text(f"{len(eventInfo)} people have joined this event [{row[1]}]:", call.from_user.id, call.message.message_id, parse_mode="html", reply_markup=keyboard)
         if call.data == "partList_" + str(row[0]):
             keyboard = telebot.types.InlineKeyboardMarkup()
             with lock:
@@ -242,8 +240,9 @@ def send_code(user, evID, evName):
     qr.add_data(input_data)
     qr.make(fit=True)
     img = qr.make_image(fill='black', back_color='white')
-    img.save('database/'+ unicalID + '.png')
-    message = bot.send_photo(user.id, open('database/' + unicalID + '.png', 'rb'))
+    print(img.save('/home/pi/qraccess/database/'+ unicalID + '.jpg'))
+    time.sleep(2)
+    message = bot.send_photo(user.id, open('/home/pi/qraccess/database/' + unicalID + '.jpg', 'rb'))
 
     string = "You've joined the event [ <b>{0}</b> ]! Here's your unique QR.".format(evName)
     keyboard = telebot.types.InlineKeyboardMarkup()
