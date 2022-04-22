@@ -12,6 +12,7 @@ MySQL_HOST = "5.63.161.116"
 MySQL_USER = "admin_gavag"
 MySQL_PASSWORD = "DMdtMe71U4"
 MySQL_DB = "admin_gavag"
+
 dbHandle = MySQL.connect(host=MySQL_HOST, user=MySQL_USER, password=MySQL_PASSWORD, database=MySQL_DB)
 lock = threading.Lock()
 bot = telebot.TeleBot("5239236978:AAFYs8tCXGI9sGh5UhIjNCh9uOqANi1Yp8Y")
@@ -21,22 +22,27 @@ isEditing = "0"
 eventName = ""
 isOpenedManageMenu = 0
 cur = dbHandle.cursor()
+x = 0
 def runBot():
+    global x
+    x = x+1
+    print(x)
     cur.execute('''CREATE TABLE IF NOT EXISTS eventsList (
-        `eID` varchar(64) NOT NULL, 
+        `eID` varchar(64) NOT NULL,
         `eName` varchar(64) NOT NULL,
         `eCreator` varchar(64) NOT NULL,
-        `cDate` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        `rDate` datetime DEFAULT '0000-00-00 00:00:00',
+        `cDate` datetime DEFAULT '0000-00-00  00:00:00',
+        `rDate` datetime DEFAULT '0000-00-00  00:00:00',
         `chatID` bigint(32) NOT NULL,
         `messageID1` bigint(32) NOT NULL,
         `messageID2` bigint(32) NOT NULL,
         `eDescription` longtext NOT NULL,
-        `eCreatorID` bigint(32) NOT NULL
+        `eCreatorID` bigint(32) NOT NULL,
+        `eEndingDate` datetime DEFAULT '0000-00-00 00:00:00'
     )''')
+    
 
     dbHandle.commit()
-
     def setCreate(arg):
         global eCreate
         eCreate = arg
@@ -106,10 +112,10 @@ def runBot():
                 bot.edit_message_text(f"The new date has been selected: {result}", c.message.chat.id,
                                       c.message.message_id)
 
-            global eventDate
-            eventDate = result
+            global eventDateOnly
+            eventDateOnly = result
             setCreate(3)
-            bot.send_message(c.from_user.id, f"Please enter the time (HH:MM):")
+            bot.send_message(c.from_user.id, f"Please enter the time of the beginning of the event (HH:MM):")
 
     @bot.callback_query_handler(func=lambda call: True)
     def callback_worker(call):
@@ -218,16 +224,27 @@ def runBot():
             bot.send_message(message.from_user.id, f"Please select the {LSTEP[step]}:", reply_markup=calendar)
         elif eCreate == 3:
             if re.match("^(2[0-3]|[01]?[0-9]):([0-5]?[0-9])$", message.text) == None:
-                bot.send_message(message.from_user.id, f"Please enter the time (HH:MM):")
+                bot.send_message(message.from_user.id, f"Please enter the time of the beginning of the event (HH:MM):")
             else:
                 global eventDate
-                eventDate = str(eventDate) + " " + message.text + ":00"
+                eventDate = str(eventDateOnly) + " " + message.text + ":00"
                 setCreate(4)
                 bot.send_message(message.from_user.id, f"Please enter the event description:")
         elif eCreate == 4:
+            global endingDate
             global eDescription
             eDescription = message.text
-            create_new_event(eMessID, eventName, eventDate, eDescription)
+            bot.send_message(message.from_user.id, f"The entrance is opened till:")
+            setCreate(5)
+        elif eCreate == 5:
+            if re.match("^(2[0-3]|[01]?[0-9]):([0-5]?[0-9])$", message.text) == None:
+                bot.send_message(message.from_user.id, f"The entrance is opened till:")
+            else:
+                endingDate = str(eventDateOnly) + " " + message.text + ":00"
+                create_new_event(eMessID, eventName, eventDate, eDescription)
+
+
+            
 
     def send_code(user, evID, evName):
         now = datetime.now()
@@ -252,7 +269,12 @@ def runBot():
             "cDate": currentDate
         }
 
-        qr.add_data(input_data)
+        qrData = {
+            "eventID": evID,
+            "unicalID": unicalID
+        }
+
+        qr.add_data(qrData)
         qr.make(fit=True)
         img = qr.make_image(fill='black', back_color='white')
         print(img.save('/home/pi/qraccess/database/' + unicalID + '.jpg'))
@@ -265,9 +287,9 @@ def runBot():
         keyboard.add(button_join)
         message1 = bot.send_message(user.id, string, parse_mode="HTML", reply_markup=keyboard)
 
-        sqlStr = '''INSERT INTO {0} (unicalID, userID, userName, fName, lName, rDate, messageID1, messageID2) VALUES ('{1}', '{2}', '{3}', '{4}', '{5}', '0', {6}, {7})'''.format(
+        sqlStr = '''INSERT INTO {0} (unicalID, userID, userName, fName, lName, rDate, messageID1, messageID2, cDate) VALUES ('{1}', '{2}', '{3}', '{4}', '{5}', '0', {6}, {7}, '{8}')'''.format(
             input_data['eventID'], input_data['unicalID'], input_data['userID'], input_data['userName'],
-            input_data['fName'], input_data['lName'], message.message_id, message1.message_id)
+            input_data['fName'], input_data['lName'], message.message_id, message1.message_id, currentDate)
         cur.execute(sqlStr)
         dbHandle.commit()
 
@@ -290,8 +312,8 @@ def runBot():
                 `userName` varchar(64) NOT NULL,
                 `fName` varchar(64) NOT NULL,
                 `lName` varchar(64) NOT NULL,
-                `cDate` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `rDate` datetime DEFAULT '0000-00-00 00:00:00',
+                `cDate` datetime DEFAULT '0000-00-00  00:00:00',
+                `rDate` datetime DEFAULT '0000-00-00  00:00:00',
                 `messageID1` bigint(32) NOT NULL,
                 `messageID2` bigint(32) NOT NULL
             )'''.format(eventUnique))
@@ -304,16 +326,16 @@ def runBot():
             keyboard1.add(button_join2)
             messagec = bot.send_message(eMessID.from_user.id, "You've created an event <b>{0}</b>!".format(eName),
                                         parse_mode="HTML", reply_markup=keyboard1)
-            str = "<b>{0}</b> created an event [ <b>{1}</b> - <b>{2}</b> ].\n\n<i>{3}</i>\n\n<b>Would you like to join?</b>".format(
-                eMessID.from_user.first_name, eName, eDate, eDesc)
+            str = "<b>{0}</b> created an event [ <b>{1}</b> | <b>{2} - {3}</b> ].\n\n<i>{4}</i>\n\n<b>Would you like to join?</b>".format(
+                eMessID.from_user.first_name, eName, eDate, endingDate, eDesc)
             keyboard = telebot.types.InlineKeyboardMarkup()
             button_join = telebot.types.InlineKeyboardButton(text='Join the event!',
                                                              callback_data='join_' + eventUnique)
             keyboard.add(button_join)
             message = bot.send_message(eMessID.chat.id, str, parse_mode="HTML", reply_markup=keyboard)
-            sqlStr = "INSERT INTO `eventsList`(`eID`, `eName`, `eCreator`, `rDate`, `chatID`, `messageID1`, `messageID2`, `eDescription`, `eCreatorID`) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', \"{7}\", '{8}')".format(
+            sqlStr = "INSERT INTO `eventsList`(`eID`, `eName`, `eCreator`, `rDate`, `chatID`, `messageID1`, `messageID2`, `eDescription`, `eCreatorID`, `cDate`, `eEndingDate`) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', \"{7}\", '{8}', '{9}', '{10}')".format(
                 postObject['eID'], eName, postObject['eCreator'], eventDate, eMessID.chat.id, message.message_id,
-                messagec.message_id, eDesc, eMessID.from_user.id)
+                messagec.message_id, eDesc, eMessID.from_user.id, postObject['cDate'], endingDate)
             cur.execute(sqlStr)
             dbHandle.commit()
         else:
@@ -321,8 +343,8 @@ def runBot():
                 cur.execute("SELECT * FROM `eventsList` WHERE eID = '{0}'".format(isEditing))
                 eventInfo = list(cur)
 
-            str = "<b>{0}</b> created an event [ <b>{1}</b> - <b>{2}</b> ].\n\n<i>{3}</i>\n\n<b>Would you like to join?</b> <i>(Edited)</i>".format(
-                eMessID.from_user.first_name, eName, eDate, eDesc)
+            str = "<b>{0}</b> created an event [ <b>{1}</b> | <b>{2} - {3}</b> ].\n\n<i>{4}</i>\n\n<b>Would you like to join?</b> <i>(Edited)</i>".format(
+                eMessID.from_user.first_name, eName, eDate, endingDate, eDesc)
             keyboard = telebot.types.InlineKeyboardMarkup()
             button_join = telebot.types.InlineKeyboardButton(text='Join the event!',
                                                              callback_data='join_' + eventInfo[0][0])
@@ -335,8 +357,8 @@ def runBot():
                 bot.send_message(eMessID.from_user.id,
                                  "Your event was edited successfully! (<b>{0}</b>)".format(eventInfo[0][2]),
                                  parse_mode="html")
-            sqlStr = '''UPDATE `eventsList` SET `eName`="{0}", `rDate`="{1}", `eDescription`="{2}" WHERE `eID` = "{3}"'''.format(
-                eName, eventDate, eDesc, isEditing)
+            sqlStr = '''UPDATE `eventsList` SET `eName`="{0}", `rDate`="{1}", `eDescription`="{2}", `eEndingDate`="{3}" WHERE `eID` = "{4}"'''.format(
+                eName, eventDate, eDesc, endingDate, isEditing)
             cur.execute(sqlStr)
             dbHandle.commit()
 
@@ -348,4 +370,3 @@ while True:
         runBot()
     except Exception as e:
         bot.send_message(838233402, e)
-        time.sleep(5)
