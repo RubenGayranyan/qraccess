@@ -8,10 +8,10 @@ import mysql.connector as MySQL
 import re
 import time
 
-MySQL_HOST = "sql11.freesqldatabase.com";
-MySQL_USER = "sql11487359";
-MySQL_PASSWORD = "e61txP3ZzV";
-MySQL_DB = "sql11487359";
+MySQL_HOST = "141.8.193.236";
+MySQL_USER = "f0663527";
+MySQL_PASSWORD = "daaksuzuuv";
+MySQL_DB = "f0663527";
 
 lock = threading.Lock()
 bot = telebot.TeleBot("5239236978:AAFYs8tCXGI9sGh5UhIjNCh9uOqANi1Yp8Y")
@@ -58,7 +58,7 @@ def runBot():
         `eName` varchar(64) NOT NULL,
         `eCreator` varchar(64) NOT NULL,
         `cDate` datetime DEFAULT CURRENT_TIMESTAMP,
-        `rDate` datetime DEFAULT CURRENT_TIMESTAMP,
+        `rDate` datetime,
         `chatID` bigint(32) NOT NULL,
         `messageID1` bigint(32) NOT NULL,
         `messageID2` bigint(32) NOT NULL,
