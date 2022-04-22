@@ -8,10 +8,10 @@ import mysql.connector as MySQL
 import re
 import time
 
-MySQL_HOST = "141.8.193.236";
-MySQL_USER = "f0663527_qr";
-MySQL_PASSWORD = "daaksuzuuv";
-MySQL_DB = "f0663527_qr";
+MySQL_HOST = "https://cp.sprinthost.ru";
+MySQL_USER = "f0663527_qr_access";
+MySQL_PASSWORD = "gazan444";
+MySQL_DB = "f0663527_qr_access";
 
 lock = threading.Lock()
 bot = telebot.TeleBot("5239236978:AAFYs8tCXGI9sGh5UhIjNCh9uOqANi1Yp8Y")
