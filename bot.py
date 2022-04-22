@@ -26,8 +26,8 @@ def runBot():
         `eID` varchar(64) NOT NULL,
         `eName` varchar(64) NOT NULL,
         `eCreator` varchar(64) NOT NULL,
-        `cDate` datetime DEFAULT '1000-01-01  00:00:00',
-        `rDate` datetime DEFAULT '1000-01-01  00:00:00',
+        `cDate` datetime DEFAULT '0000-00-00  00:00:00',
+        `rDate` datetime DEFAULT '0000-00-00  00:00:00',
         `chatID` bigint(32) NOT NULL,
         `messageID1` bigint(32) NOT NULL,
         `messageID2` bigint(32) NOT NULL,
@@ -265,9 +265,9 @@ def runBot():
         keyboard.add(button_join)
         message1 = bot.send_message(user.id, string, parse_mode="HTML", reply_markup=keyboard)
 
-        sqlStr = '''INSERT INTO {0} (unicalID, userID, userName, fName, lName, rDate, messageID1, messageID2, cDate) VALUES ('{1}', '{2}', '{3}', '{4}', '{5}', '0', {6}, {7}, '{8}')'''.format(
+        sqlStr = '''INSERT INTO {0} (unicalID, userID, userName, fName, lName, rDate, messageID1, messageID2, cDate) VALUES ('{1}', '{2}', '{3}', '{4}', '{5}', '0', {6}, {7}, NOW())'''.format(
             input_data['eventID'], input_data['unicalID'], input_data['userID'], input_data['userName'],
-            input_data['fName'], input_data['lName'], message.message_id, message1.message_id, currentDate)
+            input_data['fName'], input_data['lName'], message.message_id, message1.message_id)
         cur.execute(sqlStr)
         dbHandle.commit()
 
@@ -290,8 +290,8 @@ def runBot():
                 `userName` varchar(64) NOT NULL,
                 `fName` varchar(64) NOT NULL,
                 `lName` varchar(64) NOT NULL,
-                `cDate` datetime DEFAULT '1000-01-01  00:00:00',
-                `rDate` datetime DEFAULT '1000-01-01  00:00:00',
+                `cDate` datetime DEFAULT '0000-00-00  00:00:00',
+                `rDate` datetime DEFAULT '0000-00-00  00:00:00',
                 `messageID1` bigint(32) NOT NULL,
                 `messageID2` bigint(32) NOT NULL
             )'''.format(eventUnique))
@@ -311,9 +311,9 @@ def runBot():
                                                              callback_data='join_' + eventUnique)
             keyboard.add(button_join)
             message = bot.send_message(eMessID.chat.id, str, parse_mode="HTML", reply_markup=keyboard)
-            sqlStr = "INSERT INTO `eventsList`(`eID`, `eName`, `eCreator`, `rDate`, `chatID`, `messageID1`, `messageID2`, `eDescription`, `eCreatorID`, `cDate`) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', \"{7}\", '{8}', '{9}')".format(
+            sqlStr = "INSERT INTO `eventsList`(`eID`, `eName`, `eCreator`, `rDate`, `chatID`, `messageID1`, `messageID2`, `eDescription`, `eCreatorID`, `cDate`) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', \"{7}\", '{8}', NOW())".format(
                 postObject['eID'], eName, postObject['eCreator'], eventDate, eMessID.chat.id, message.message_id,
-                messagec.message_id, eDesc, eMessID.from_user.id, postObject['cDate'])
+                messagec.message_id, eDesc, eMessID.from_user.id)
             cur.execute(sqlStr)
             dbHandle.commit()
         else:
