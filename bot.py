@@ -8,11 +8,11 @@ import mysql.connector as MySQL
 import re
 import time
 
-MySQL_HOST = "141.8.193.236";
-MySQL_USER = "f0663527_qr";
-MySQL_PASSWORD = "Eh0RBdJf";
-MySQL_DB = "f0663527_qr";
-
+MySQL_HOST = "sql11.freemysqlhosting.net"
+MySQL_USER = "sql11487394"
+MySQL_PASSWORD = "yhC9yhFKv1"
+MySQL_DB = "sql11487394"
+dbHandle = MySQL.connect(host=MySQL_HOST, user=MySQL_USER, password=MySQL_PASSWORD, database=MySQL_DB)
 lock = threading.Lock()
 bot = telebot.TeleBot("5239236978:AAFYs8tCXGI9sGh5UhIjNCh9uOqANi1Yp8Y")
 eCreate = 0
@@ -20,52 +20,51 @@ eMessID = 0
 isEditing = "0"
 eventName = ""
 isOpenedManageMenu = 0
-
-def setCreate(arg):
-    global eCreate
-    eCreate = arg
-
-def setMessID(arg):
-    global eMessID
-    eMessID = arg
-
-def setEvName(arg):
-    global eventName
-    eventName = arg
-
-def setManageMenuState(arg):
-    global isOpenedManageMenu
-    isOpenedManageMenu = arg
-
-cLetters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U",
-            "V", "W", "X", "Y", "Z"]
-sLetters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u",
-            "v", "w", "x", "y", "z"]
-numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-
-idCharacters = cLetters + sLetters + numbers
-
-qr = qrcode.QRCode(
-    version=1,
-    box_size=10,
-    border=5)
-
+cur = dbHandle.cursor()
 def runBot():
-    dbHandle = MySQL.connect(host=MySQL_HOST, user=MySQL_USER, password=MySQL_PASSWORD, database=MySQL_DB)
-    cur = dbHandle.cursor()
     cur.execute('''CREATE TABLE IF NOT EXISTS eventsList (
         `eID` varchar(64) NOT NULL,
         `eName` varchar(64) NOT NULL,
         `eCreator` varchar(64) NOT NULL,
-        `cDate` datetime DEFAULT CURRENT_TIMESTAMP,
-        `rDate` datetime,
+        `cDate` datetime DEFAULT '1000-01-01  00:00:00',
+        `rDate` datetime DEFAULT '1000-01-01  00:00:00',
         `chatID` bigint(32) NOT NULL,
         `messageID1` bigint(32) NOT NULL,
         `messageID2` bigint(32) NOT NULL,
         `eDescription` longtext NOT NULL,
         `eCreatorID` bigint(32) NOT NULL
     )''')
+
     dbHandle.commit()
+
+    def setCreate(arg):
+        global eCreate
+        eCreate = arg
+
+    def setMessID(arg):
+        global eMessID
+        eMessID = arg
+
+    def setEvName(arg):
+        global eventName
+        eventName = arg
+
+    def setManageMenuState(arg):
+        global isOpenedManageMenu
+        isOpenedManageMenu = arg
+
+    cLetters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U",
+                "V", "W", "X", "Y", "Z"]
+    sLetters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u",
+                "v", "w", "x", "y", "z"]
+    numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+
+    idCharacters = cLetters + sLetters + numbers
+
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=5,
+        border=2)
 
     @bot.message_handler(commands=["start", "help"])
     def send_welcome(message):
@@ -291,8 +290,8 @@ def runBot():
                 `userName` varchar(64) NOT NULL,
                 `fName` varchar(64) NOT NULL,
                 `lName` varchar(64) NOT NULL,
-                `cDate` datetime DEFAULT CURRENT_TIMESTAMP,
-                `rDate` datetime DEFAULT CURRENT_TIMESTAMP,
+                `cDate` datetime DEFAULT '1000-01-01  00:00:00',
+                `rDate` datetime DEFAULT '1000-01-01  00:00:00',
                 `messageID1` bigint(32) NOT NULL,
                 `messageID2` bigint(32) NOT NULL
             )'''.format(eventUnique))
