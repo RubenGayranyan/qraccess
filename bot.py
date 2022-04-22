@@ -21,7 +21,11 @@ isEditing = "0"
 eventName = ""
 isOpenedManageMenu = 0
 cur = dbHandle.cursor()
+x = 0
 def runBot():
+    global x
+    x = x+1
+    print(x)
     cur.execute('''CREATE TABLE IF NOT EXISTS eventsList (
         `eID` varchar(64) NOT NULL,
         `eName` varchar(64) NOT NULL,
@@ -34,9 +38,9 @@ def runBot():
         `eDescription` longtext NOT NULL,
         `eCreatorID` bigint(32) NOT NULL
     )''')
+    
 
     dbHandle.commit()
-
     def setCreate(arg):
         global eCreate
         eCreate = arg
@@ -252,7 +256,12 @@ def runBot():
             "cDate": currentDate
         }
 
-        qr.add_data(input_data)
+        qrData = {
+            "eventID": evID,
+            "unicalID": unicalID
+        }
+
+        qr.add_data(qrData)
         qr.make(fit=True)
         img = qr.make_image(fill='black', back_color='white')
         print(img.save('/home/pi/qraccess/database/' + unicalID + '.jpg'))
