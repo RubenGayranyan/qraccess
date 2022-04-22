@@ -265,7 +265,7 @@ def runBot():
         keyboard.add(button_join)
         message1 = bot.send_message(user.id, string, parse_mode="HTML", reply_markup=keyboard)
 
-        sqlStr = '''INSERT INTO {0} (unicalID, userID, userName, fName, lName, rDate, messageID1, messageID2) VALUES ('{1}', '{2}', '{3}', '{4}', '{5}', '0', {6}, {7})'''.format(
+        sqlStr = '''INSERT INTO {0} (unicalID, userID, userName, fName, lName, rDate, messageID1, messageID2, cDate) VALUES ('{1}', '{2}', '{3}', '{4}', '{5}', '0', {6}, {7}, NOW())'''.format(
             input_data['eventID'], input_data['unicalID'], input_data['userID'], input_data['userName'],
             input_data['fName'], input_data['lName'], message.message_id, message1.message_id)
         cur.execute(sqlStr)
@@ -311,7 +311,7 @@ def runBot():
                                                              callback_data='join_' + eventUnique)
             keyboard.add(button_join)
             message = bot.send_message(eMessID.chat.id, str, parse_mode="HTML", reply_markup=keyboard)
-            sqlStr = "INSERT INTO `eventsList`(`eID`, `eName`, `eCreator`, `rDate`, `chatID`, `messageID1`, `messageID2`, `eDescription`, `eCreatorID`) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', \"{7}\", '{8}')".format(
+            sqlStr = "INSERT INTO `eventsList`(`eID`, `eName`, `eCreator`, `rDate`, `chatID`, `messageID1`, `messageID2`, `eDescription`, `eCreatorID`, `cDate`) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', \"{7}\", '{8}', NOW())".format(
                 postObject['eID'], eName, postObject['eCreator'], eventDate, eMessID.chat.id, message.message_id,
                 messagec.message_id, eDesc, eMessID.from_user.id)
             cur.execute(sqlStr)
